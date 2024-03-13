@@ -6,15 +6,42 @@ import { Link } from 'react-router-dom';
 
 export default function PostPage() {
     const [postInfo, setPostInfo] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [newComment, setNewComment] = useState('');
     const { userInfo } = useContext(UserContext);
     const { id } = useParams();
-    useEffect(() => {
+
+    const fetchPostInfo = () => {
         fetch(`http://localhost:3000/post/${id}`)
-            .then(response => {
-                response.json().then(postInfo => {
-                    setPostInfo(postInfo);
-                });
+            .then(response => response.json())
+            .then(postInfo => setPostInfo(postInfo));
+    };
+
+    const fetchComments = () => {
+        fetch(`http://localhost:3000/comments/${id}`)
+            .then(response => response.json())
+            .then(comments => setComments(comments));
+    };
+
+    const handleCommentSubmit = () => {
+        fetch('http://localhost:3000/comment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+            body: JSON.stringify({ content: newComment, postId: id }),
+        })
+            .then(response => response.json())
+            .then(comment => {
+                setComments([...comments, comment]);
+                setNewComment('');
             });
+    };
+
+    useEffect(() => {
+        fetchPostInfo();
+        fetchComments();
     }, []);
 
     if (!postInfo) return '';
@@ -24,6 +51,8 @@ export default function PostPage() {
             <h1>{postInfo.title}</h1>
             <time>{formatISO9075(new Date(postInfo.createdAt))}</time>
             <div className="author">by @{postInfo.author.username}</div>
+            <div className="author"> <span id="tag">{postInfo.category}</span></div>
+
             {userInfo.id === postInfo.author._id && (
                 <div className="edit-row">
                     <Link className="edit-btn" to={`/edit/${postInfo._id}`}>
@@ -38,6 +67,28 @@ export default function PostPage() {
                 <img src={`http://localhost:3000/${postInfo.cover}`} alt="" />
             </div>
             <div className="content" dangerouslySetInnerHTML={{ __html: postInfo.content }} />
+
+            <div className="comments-section">
+                <h2>Comments</h2>
+                <div className="comment-list">
+                    {comments.map(comment => (
+                        <div key={comment._id} className="comment">
+                            <span className="comment-author">@{comment.author.username}</span>
+                            <p>{comment.content}</p>
+                        </div>
+                    ))}
+                </div>
+                {userInfo && (
+                    <div className="new-comment">
+                        <textarea
+                            placeholder="Add a comment..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                        />
+                        <button onClick={handleCommentSubmit}>Submit</button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

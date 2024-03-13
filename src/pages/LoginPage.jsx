@@ -7,39 +7,53 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [redirect, setRedirect] = useState(false);
     const { setUserInfo } = useContext(UserContext);
+
     async function login(ev) {
         ev.preventDefault();
-        const response = await fetch('http://localhost:3000/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-        });
-        if (response.ok) {
-            response.json().then(userInfo => {
+        try {
+            const response = await fetch('http://localhost:3000/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password }),
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const userInfo = await response.json();
                 setUserInfo(userInfo);
                 setRedirect(true);
-            });
-        } else {
-            alert('wrong credentials');
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Login failed');
+            }
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'An error occurred during login');
         }
     }
 
     if (redirect) {
-        return <Navigate to={'/'} />
+        return <Navigate to={'/'} />;
     }
+
     return (
-        <form className="login" onSubmit={login}>
-            <h1>Login</h1>
-            <input type="text"
-                placeholder="username"
-                value={username}
-                onChange={ev => setUsername(ev.target.value)} />
-            <input type="password"
-                placeholder="password"
-                value={password}
-                onChange={ev => setPassword(ev.target.value)} />
-            <button>Login</button>
-        </form>
+        <div >
+            <form className="login" onSubmit={login}>
+                <h1>Login</h1>
+                <input
+                    type="text"
+                    placeholder="Username"
+                    value={username}
+                    onChange={ev => setUsername(ev.target.value)}
+                />
+                <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={ev => setPassword(ev.target.value)}
+                />
+                <button type="submit">Login</button>
+            </form>
+        </div>
     );
 }
